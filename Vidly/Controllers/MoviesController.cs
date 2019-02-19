@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Vidly.Models;
+using Vidly.Migrations;
 using Vidly.ViewModels;
 using System.Data.Entity;
 
@@ -20,6 +21,61 @@ namespace Vidly.Controllers
         protected override void Dispose(bool disposing)
         {
             _context.Dispose();
+        }
+
+        public ActionResult New()
+        {
+            //need to pass genres to populate dropdown
+            var genres = _context.Genres.ToList();
+
+            var viewModel = new MovieFormViewModel
+            {
+                Genres = genres
+            };
+
+            return View("MovieForm", viewModel);
+        }
+
+        [HttpPost]
+        public ActionResult Save(Movie movie)
+        {
+            if (movie.Id == 0)
+            {
+                movie.DateAdded = DateTime.Now;
+                _context.Movies.Add(movie);
+            }
+            else
+            {
+                // Single returns the only element of the sequence which satisfies the condition
+                var movieInDb = _context.Movies.Single(m => m.Id == movie.Id);
+
+                movieInDb.Name = movie.Name;
+                movieInDb.ReleaseDate = movie.ReleaseDate;
+                movieInDb.GenreId = movie.GenreId;
+                movieInDb.NumberInStock = movie.NumberInStock;
+            }
+            // to persist the changes
+            _context.SaveChanges();
+
+            return RedirectToAction("Index", "Movies");
+        }
+
+        public ActionResult Edit(int id)
+        {
+            var editedMovie = _context.Movies.SingleOrDefault(m => m.Id == id);
+
+            if (editedMovie == null)
+            {
+                return HttpNotFound();
+            }
+
+            var viewModel = new MovieFormViewModel
+            {
+                Movie = editedMovie,
+                Genres = _context.Genres.ToList()
+            };
+
+            return View("MovieForm", viewModel);
         }
 
         // GET: Movies/Random
@@ -51,13 +107,6 @@ namespace Vidly.Controllers
 
         }
 
-        public ActionResult Edit(int id)
-        {
-            return Content("id=" + id);
-
-            // http://localhost:49275/Movies/edit?id=2
-            //http://localhost:49275/Movies/edit/1
-        }
 
         // movies/
         public ActionResult Index()
